@@ -1,0 +1,381 @@
+---
+title: "two-way ANOVA"
+author: "Arash Hatamirad, ahatamirad@gmail.com"
+date: "9/1/2021"
+output:
+  html_document: default
+  word_document: default
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+knitr::opts_knit$set(root.dir = "C:/Users/Sanaz/Documents/All_MSDA_Projects and Sources/R Ptojects/Algorithm I/HW02")
+
+# Install required packages
+
+# install.packages("MASS")
+# install.packages("fBasics")
+# install.packages("moments")
+# install.packages("dplyr")
+# install.packages("car")
+#install.packages("DescTools")
+
+
+library(MASS)
+library(fBasics)
+library(moments)
+library(dplyr)
+library(car)
+library(DescTools)
+
+#Data: heartbpchol.csv for Exercise1, 
+# bupa.csv for Exercise 2, 
+# psych.csv for Exercise3, 
+# cars_new.csv for Exercise 4
+```
+
+
+
+## Analysis of Variance   
+
+The psychology department at a hypothetical university has been accused of underpaying female faculty members. The data represent salary (in thousands of dollars) for all 22 professors in the department. This problem is from Maxwell and Delaney (2004). 
+
+
+```{r}
+q3.data <- read.csv("psych.csv")
+
+#View(q3.data)
+#str(q3.data)
+
+
+# Convert char to factor for 2 independent cariables:
+q3.data$sex <- factor(q3.data$sex)
+q3.data$rank <- factor(q3.data$rank)
+
+str(q3.data)
+
+```
+We have two independent variables:  
+1- Sex: 2 levels (F/M)  
+2- Rank: 2 levels (Assist/Assoc)  
+
+
+***
+
+#### Question (a): 
+- Fit a two-way ANOVA model including sex (F, M) and rank (Assistant, Associate) the interaction term. What do the Type 1 and Type 3 sums of squares tell us about significance of effects? Is the interaction between sex and rank significant? Also comment on the variation explained by the model. 
+
+#### Answer -:  
+  
+
+##### Step 1) Check Balancing  
+
+```{r}
+
+table(q3.data$sex)
+table(q3.data$rank)
+
+
+```
+
+##### Result:  
+Data of Sex and Rank are unbalanced.
+Thus, we must use Type I and Type III for checking results.
+
+
+##### Step 2) Run Two-Way ANOVA 
+
+```{r}
+q3.aov.a <-aov(salary~ sex * rank, data=q3.data)
+summary(q3.aov.a)
+
+```
+
+##### Step 3) Chack significant of effects 
+- Sex:  
+     H0: there is no sex effect  
+     H1: there exist sex effect   
+     
+- Rank:  
+     H0: there is no rank effect  
+     H1: there exist rank effect  
+     
+- Sex * Rank:  
+     H0: there is no interaction effect  
+     H1: there exist interaction effect          
+
+
+##### Step 4) Calculate the R Square  
+
+```{r}
+
+q3.lm.a <- lm(salary ~ sex+rank , data=q3.data)
+#aov(q3.lm.a)
+summary(q3.lm.a)$r.square
+
+```
+##### Result:  
+The R Square is the percentage of variation in a response variable that is explained by the model.  
+
+
+
+##### Step 5) Run Type I & Type III  
+
+- Type I, ordering by sex  
+
+```{r}
+q3.a.t1.1 <- aov(data=q3.data, salary ~ sex * rank)
+summary(q3.a.t1.1)
+```
+
+- Type I, ordering by rank  
+
+```{r}
+q3.a.t1.2 <- aov(data= q3.data, salary ~ rank * sex)
+summary(q3.a.t1.2)
+
+```
+
+##### Result Type I:   
+Because Type I is sequential SS, therefore the order does matter, hence outputs are different. 
+we add "Sex" at the first to model and next add the "rank", thus we will use the first one (q3.a.t1.1) as below:  
+
+SS(sex): 155.15     
+SS(rank|sex): 169.82     
+
+
+
+Regarding to P-Values of Type I (first sex, rank next):  
+- there exist significant sex effect.  
+- there exist significant rank effect.  
+- there is no interaction effect between sex and rank (P_Value is very large).  
+
+
+- Type III   
+
+```{r}
+
+Anova(q3.a.t1.1,type=3)
+
+Anova(q3.a.t1.2,type=3)
+# q3.a.t3.1 <- Anova(q3.a.t1.1,type=3)
+# q3.a.t3.1
+# 
+# 
+# q3.a.t3.2 <- Anova(q3.a.t1.2,type=3)
+# q3.a.t3.2
+
+```
+
+##### Result Type III:  
+Because Type III is partial SS, therefore the order doesn't matter. As we can see the results, both outputs are equal.  
+
+SS(sex): 28.0     
+SS(rank|sex): 70.4  
+
+
+Regarding to P-Values:  
+- There is not significant sex effect.   
+- There exist significant rank effect.   
+- There is not significant interaction effect between sex and rank.  
+
+
+
+#### Conclussion:  
+- In both Type I and Type III, there is significant rank effect.  
+- In both Type I and Type III, there is not significant interaction effect.  
+- In Type I, there is significant sex effect, but in Type III there is not.  
+
+
+
+##### Step 6) Chack variance equality by "Levene Test" 
+
+- H0: Variances are equal (Homogeneity of Variances)  
+- H1: Variances are not equal (Heterogeneous of variances)   
+
+```{r}
+leveneTest(q3.aov.a)
+```
+
+##### Result:  
+P-Value is very large, thus we don't have enough evidence to reject the Null, therefore the variances are equal (Variances are Homogeneity)  
+
+
+##### Step 7) Diagnostic plot  
+- We can judge the normality assumption, through the QQ plot  
+
+```{r}
+par(mfrow=c(2,2))
+plot(q3.aov.a)
+
+```
+##### Result:  
+According to QQ plot, normality assumption is reasonable, although there are some extreme values out of the line, but it's acceptable, because ANOVA works on the semi-normal style data.
+
+Regarding to Residuals plot, the variances are equal (Same result of Levene Test).   
+
+
+***
+
+#### Question (b): 
+
+#### Answer -:  
+ 
+
+##### Step 1) Check Balancing  
+- It's done at the last part and data is unbalanced.  
+
+##### Step 2) Run Two-Way ANOVA  
+
+
+```{r}
+q3.aov.b <-aov(data= q3.data , salary~ sex + rank)
+summary(q3.aov.b)
+
+```
+
+
+##### Step 3) Chack significant of effect  
+- Sex:  
+     H0: there is no sex effect  
+     H1: there exist sex effect   
+     
+- Rank:  
+     H0: there is no rank effect  
+     H1: there exist rank effect  
+     
+
+##### Step 4) Calculate the R Square  
+
+```{r}
+
+q3.lm.b <- lm(salary ~ sex+rank , data=q3.data)
+#aov(q3.lm.b)
+summary(q3.lm.b)$r.square
+
+```
+##### Result:  
+The R Square is the percentage of variation in a response variable that is explained by the model.  
+
+
+
+##### Step 5) Run Type I & Type III  
+
+- Type I, ordering by sex  
+
+```{r}
+q3.b.t1 <- aov(data=q3.data, salary ~ sex + rank)
+summary(q3.b.t1)
+```
+
+##### Result Type I:   
+
+SS(sex): 155.2       
+SS(rank|sex): 169.8       
+
+
+Regarding to P-Values of Type I:  
+- there exist significant sex effect.  
+- there exist significant rank effect.  
+
+
+- Type III   
+
+```{r}
+
+Anova(q3.aov.b,type=3)
+
+# q3.a.t3 <- Anova(q3.aov.b,type=3)
+# q3.a.t3
+
+```
+
+##### Result Type III:  
+
+SS(sex): 72.8      
+SS(rank|sex): 169.8   
+
+
+Regarding to P-Values:  
+- There exist significant sex effect.   
+- There exist significant rank effect.   
+
+
+#### Conclussion:  
+- In both Type I and Type III, there is significant sex effect.  
+- In both Type I and Type III, there is significant rank effect.  
+
+
+
+
+##### Step 6) Chack variance equality by "Levene Test" 
+because we have not interaction, we can not run levene test, thus we will use the residuals plot.   
+
+
+
+##### Step 7) Diagnostic plot  
+
+```{r}
+par(mfrow=c(2,2))
+plot(q3.aov.b)
+
+```
+##### Result:  
+According to QQ plot, normality assumption is reasonable, although there are some extreme values out of the line, but it's acceptable, because ANOVA works on the semi-normal style data.
+
+Regarding to Residuals plot, the variances are not equal (data are heterogeneous). thus we must run Welch test.  
+
+
+***
+
+
+#### Question (c): 
+- Obtain model diagnostics to validate your Normality assumptions.  
+
+
+#### Answer -:  
+Normality assumption have been checked at the part (a and b), here we have it again:  
+
+```{r}
+par(mfrow=c(2,2))
+plot(q3.aov.b)
+
+```
+
+##### Result:  
+According to QQ plot, normality assumption is reasonable, although there are some extreme values out of the line, but it's acceptable, because ANOVA works on the semi-normal style data.
+
+***  
+
+
+#### Question (d): 
+- Choose a final model based on your results from parts (a) and (b). Comment on any significant group differences through the post-hoc test. State the differences in salary across different main effect groups and interaction (if included) between them.    
+
+
+#### Answer -:  
+- I will choose results of part (a):   
+
+```{r}
+TukeyHSD(q3.aov.b)
+
+```
+##### Result:  
+- Diff of "M:Assist-F:Assist" is "Positive", P-Value is large ==> µ(M:Assist) = µ(F:Assist)  
+- Diff of "F:Assoc-F:Assist" is "Positive", P-Value is large ==> µ(F:Assoc) = µ(F:Assist) 
+- Diff of "M:Assoc-F:Assist" is "Positive", P-Value is small ==> µ(M:Assoc) > µ(F:Assist) 
+- Diff of "F:Assoc-M:Assist" is "Positive", P-Value is large ==> µ(F:Assoc) = µ(M:Assist) 
+- Diff of "M:Assoc-M:Assist" is "Positive", P-Value is small ==> µ(M:Assoc) > µ(M:Assist) 
+- Diff of "M:Assoc-F:Assoc" is "Positive", P-Value is large ==> µ(M:Assoc) = µ(F:Assoc) 
+
+
+
+#### Conclussion: 
+µ(M:Assoc) > µ(M:Assist) AND µ(M:Assoc) > µ(F:Assist)  
+therefore,  
+At least male associated have different mean, thus all males and females who are associated ranked gain more salary than others who are assistant.  
+
+***
+  
+ 

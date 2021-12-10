@@ -1,0 +1,263 @@
+---
+title: "two-way ANOVA"
+author: "Arash Hatamirad, ahatamirad@gmail.com"
+date: "9/1/2021"
+output:
+  html_document: default
+  word_document: default
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+knitr::opts_knit$set(root.dir = "C:/Users/Sanaz/Documents/All_MSDA_Projects and Sources/R Ptojects/Algorithm I/HW02")
+
+# Install required packages
+
+# install.packages("MASS")
+# install.packages("fBasics")
+# install.packages("moments")
+# install.packages("dplyr")
+# install.packages("car")
+#install.packages("DescTools")
+
+
+library(MASS)
+library(fBasics)
+library(moments)
+library(dplyr)
+library(car)
+library(DescTools)
+
+#Data: heartbpchol.csv for Exercise1, 
+# bupa.csv for Exercise 2, 
+# psych.csv for Exercise3, 
+# cars_new.csv for Exercise 4
+```
+
+
+## Analysis of Variance  
+
+Use the cars_new.csv. See HW1 for detailed information of variables.  
+
+
+```{r}
+# Read data 
+q4.data <- read.csv("cars_new.csv")
+
+# Check the structure
+str(q4.data)
+
+# Convert int to factor independent variables
+
+q4.data$type <- factor(q4.data$type)
+q4.data$origin <- factor(q4.data$origin)
+q4.data$cylinders <- factor(q4.data$cylinders)
+
+
+#check the result
+
+str(q4.data)
+
+```
+
+
+
+#### Question (a): 
+- Start with a three-way main effects ANOVA and choose the best main effects ANOVA model for mpg_highway as a function of cylinders, origin, and type for the cars in this set. Comment on which terms should be kept in a model for mpg_highway and why based on Type 3 SS. For the model with just predictors you decide to keep, comment on the significant effects in the model and comment on how much variation in highway fuel efficiency the model describes.      
+
+
+#### Answer -:  
+
+
+##### Step 1) check balancing data  
+
+```{r}
+table(q4.data$cylinders)
+table(q4.data$origin)
+table(q4.data$type)
+
+
+```
+
+##### Result:  
+All terms are unbalanced.  
+
+
+
+##### Step 2) Make the full model  
+
+```{r}
+q4.aov.full.a <- aov(data= q4.data, mpg_highway ~ cylinders + origin + type )
+summary(q4.aov.full.a)
+
+```
+
+##### Step 3) Type III
+
+```{r}
+Anova(q4.aov.full.a, type=3)
+```
+
+##### Result:  
+Origin p-value is very large (insignificant), thus we will eliminate it.
+
+
+##### Step 4) Eliminate first item
+
+
+```{r}
+q4.aov.a.temp1 <- aov(data=q4.data, mpg_highway ~ cylinders + type )
+Anova(q4.aov.a.temp1, type=3)
+```
+
+##### Result:  
+All variables have significant difference, thus we stop elimination (cut-off)  
+
+The model is: (mpg_highway ~ cylinders + type)  
+
+(According to question part (a), we only checked the main effects, no need to check the interaction in this part)  
+
+
+
+ 
+
+***  
+
+
+#### Question (b): 
+- Starting with main effects chosen in part (a), find your best ANOVA model by adding in any additional interaction terms that will significantly improve the model. For your final model, comment on the significant effects and variation explained by the model.  
+       
+
+#### Answer -:  
+Our final model (based on main effects) is:   
+mpg_highway ~ cylinders + type
+
+Now we will add interaction to our model:  
+
+```{r}
+q4.aov.a.temp2 <- aov(data=q4.data, mpg_highway ~ cylinders + type + cylinders * type )
+Anova(q4.aov.a.temp2, type=3)
+
+```
+##### Result:
+P-value of interaction is small, thus we will add interaction to model. 
+our final model is:  
+ mpg_highway ~ cylinders + type + cylinders * type
+
+
+we will start two-way anova test  
+
+##### Step 1) check balancing  
+already is done.  
+
+##### Step 2) Run Two-Way ANOVA  
+
+
+```{r}
+q4.aov.b <-aov(data=q4.data, mpg_highway ~ cylinders*type )
+summary(q4.aov.b)
+
+```
+
+##### Step 3) Chack significant of effect  
+- cylinders:  
+     H0: there is no cylinders effect  
+     H1: there exist cylinders effect   
+     
+- type:  
+     H0: there is no type effect  
+     H1: there exist type effect 
+     
+    
+- interaction:  
+     H0: there is no interaction effect  
+     H1: there exist interaction effect  
+         
+
+##### Step 4) Calculate the R Square  
+
+```{r}
+
+q4.lm.b <- lm(data=q4.data, mpg_highway ~ cylinders + type + cylinders*type)
+#aov(q4.lm.b)
+summary(q4.lm.b)$r.square
+
+```
+##### Result:  
+The R Square is the percentage of variation in a response variable that is explained by the model.  
+
+
+
+##### Step 5) Run Type III  
+
+  
+```{r}
+Anova(q4.aov.b,type=3)
+
+# q4.a.t3 <- Anova(q4.aov.b,type=3)
+# q4.a.t3
+
+```
+
+##### Result Type III and conclusion:  
+
+Regarding to P-Values:  
+- There exist significant cylinders effect.   
+- There exist significant type effect.  
+- There exist significant interaction effect.  
+
+
+##### Step 6) Chack variance equality by "Levene Test" 
+
+```{r}
+leveneTest(q4.aov.b)
+
+```
+##### Result:  
+P-value is small, then variances are not equal, we must check it by residuals plot too. 
+
+
+
+##### Step 7) Diagnostic plot  
+
+```{r}
+par(mfrow=c(2,2))
+plot(q4.aov.b)
+
+```
+##### Result:  
+According to QQ plot, normality assumption is reasonable, although there are some extreme values out of the line, but it's acceptable, because ANOVA works on the semi-normal style data.
+
+Regarding to Residuals plot, the variances are not equal (data are heterogeneous). thus we must run Welch test.  
+
+*** 
+
+
+#### Question (c): 
+- Comment on any significant group differences through the post-hoc test. What does this tell us about fuel efficiency differences across cylinders, origin, or type groups? See Hint in Exercise 3.   
+       
+
+#### Answer -:  
+
+```{r}
+TukeyHSD(q4.aov.b)
+```
+##### Result:  
+- Diff of "6:Sedan-4:Sedan" is "Negative", P-Value is small ==> µ(4:Sedan) > µ(6:Sedan)  
+- Diff of "4:Sports-4:Sedan" is "Negative", P-Value is small ==> µ(4:Sedan) > µ(4:Sports) 
+- Diff of "6:Sports-4:Sedan" is "Negative", P-Value is small ==> µ(4:Sedan) > µ(6:Sports) 
+- Diff of "4:Sports-6:Sedan" is "Positive", P-Value is large ==> µ(4:Sports) = µ(6:Sedan) 
+- Diff of "6:Sports-6:Sedan" is "Negative", P-Value is large ==> µ(6:Sports) = µ(6:Sedan) 
+- Diff of "6:Sports-4:Sports" is "Negative", P-Value is large ==> µ(6:Sports) = µ(4:Sports) 
+
+
+#### Conclussion: 
+µ(4:Sedan) > µ(6:Sedan)  
+ &   
+µ(4:Sedan) > µ(4:sports) > µ(6:sports)   
+
+therefore, it means µ(4:Sedan) are different with others.  
+In the other word, sedan type with 4 cylinders has most fuel efficiency.   
+

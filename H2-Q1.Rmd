@@ -1,0 +1,182 @@
+---
+title: "Analysis of Variance"
+author: "Arash Hatamirad, ahatamirad@gmail.com"
+date: "9/1/2021"
+output:
+  html_document: default
+  word_document: default
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+knitr::opts_knit$set(root.dir = "C:/Users/Sanaz/Documents/All_MSDA_Projects and Sources/R Ptojects/Algorithm I/HW02")
+
+# Install required packages
+
+# install.packages("MASS")
+# install.packages("fBasics")
+# install.packages("moments")
+# install.packages("dplyr")
+# install.packages("car")
+#install.packages("DescTools")
+
+
+library(MASS)
+library(fBasics)
+library(moments)
+library(dplyr)
+library(car)
+library(DescTools)
+
+#Data: heartbpchol.csv for Exercise1, 
+# bupa.csv for Exercise 2, 
+# psych.csv for Exercise3, 
+# cars_new.csv for Exercise 4
+```
+
+
+## Analysis of Variance   
+
+***
+
+The heartbpchol.csv data set contains continuous cholesterol (Cholesterol) and blood pressure status (BP_Status) (category: High/ Normal/ Optimal) for alive patients.  
+ 
+For the heartbpchol.xlsx data set, consider a one-way ANOVA model to identify differences between group cholesterol means. The normality assumption is reasonable, so you can proceed without testing normality.  
+
+```{r}
+
+# Read the CSV file
+q1.data <- read.csv("heartbpchol.csv") 
+
+# Check data format
+str(q1.data)
+
+# change BP_Status to Factor
+q1.data$BP_Status <- factor(q1.data$BP_Status)
+
+str(q1.data)
+
+```
+
+***
+
+#### Question (a): 
+- Perform a one-way ANOVA for Cholesterol with BP_Status as the categorical predictor.  
+Comment on statistical significance of BP_Status, the amount of variation described by the model, and whether or not the equal variance assumption can be trusted.    
+
+#### Answer -:
+
+- H0:    
+There are no mean difference between blood pressure groups, in the other word, mean of blood pressures in any groups are equal.  
+
+- H1:  
+At least one group in blood pressure have a difference mean, thus there exist cholesterol effect.  
+
+##### Step 1) Check Balancing  
+
+```{r}
+# Check the balancing data
+
+table(q1.data$BP_Status)
+
+```
+##### Result:  
+Data of "BP_Status" is not balanced, but because this is "One_Way ANOVA" and we have only one independent variable, thus unbalancing is not important and we can continue the ANOVA test.  
+
+
+##### Step 2) Run One-Way ANOVA 
+
+```{r}
+q1.aov=aov(q1.data$Cholesterol ~ q1.data$BP_Status)
+summary(q1.aov)
+
+```
+
+
+
+##### Step 3) Chack variance equality by "Levene Test" 
+We must check equality of variances with 2 ways:  
+1) Levente Test  
+2) Residuals diagram  
+
+here we will check the leven test, next at the diagnostic step, we will check the residuals plot.    
+
+- H0: Variances are equal (Homogeneity of Variances)  
+- H1: Variances are not equal (Heterogeneous of variances)  
+
+```{r}
+
+LeveneTest(q1.aov)
+
+```
+
+##### Result: 
+P-Value is very large, thus we don't have enough evidence to reject the Null, therefore the variances are equal (Variances are Homogeneity)  
+
+
+
+##### Step 4) Diagnostic plot  
+- According the question, normality assumption is reasonable (As we can see the QQ plot, below), just we make a plot to check the residuals diagram.    
+
+
+```{r}
+par(mfrow=c(2,2))
+plot(q1.aov)
+
+```
+
+##### Result:   
+Regarding to Residuals plot, the variances are equal (Same as result of Levene Test).   
+
+
+
+##### Step 5) Calculate the R Square   
+
+```{r}
+q1.lm=lm(data=q1.data, Cholesterol ~ BP_Status)
+anova(q1.lm)
+summary(q1.lm)$r.squared
+
+```
+
+##### Result:  
+The R Square is the percentage of variation in a response variable that is explained by the model.  
+
+
+#### Conclussion:  
+According the Step (2), P-Value is very small and statisticaly significant, thus we don't have any evidence to accept Null, therefore we reject Null.  
+
+Final Result:  
+- At least one group in blood pressure has different mean, it means there exist cholesterol effect on blood pressure.  
+
+
+
+***  
+
+
+#### Question (b): 
+- Comment on any significantly different cholesterol means as determined by the post-hoc test comparing all pairwise differences. Specifically explain what that tells us about differences in cholesterol levels across blood pressure status groups, like which group has the highest or lowest mean values of Cholesterol.  
+
+#### Answer -:
+
+- Run Scheffe Test to find out the different means  
+
+```{r}
+ScheffeTest(q1.aov)
+```
+
+##### Result:  
+- Diff of "Normal-High" is "Negative", P-Value is small ==> µ(High) > µ(Normal)  
+- Diff of "Optimal-High" is "Negative", P-Value is small ==> µ(High) > µ(Optimal)  
+- Diff of "Optimal-Normal" is "Negative", P-Value is large ==> µ(Optimal) = µ(Normal)  
+
+
+#### Conclussion:  
+- µ(High) > µ(Normal)  AND     µ(High) > µ(Optimal)  
+
+In the other word, mean of the "High" is bigger than both of "Optimal" and "Normal", it means the High has highest mean value of cholesterol  
+
+
+***
